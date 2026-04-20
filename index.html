@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cryptography— ALA Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+--bg: #090b10;
+--surface: #0d1117;
+--border: #1e2736;
+    --accent1: #00ffe0;
+    --accent2: #7b61ff;
+    --accent3: #ff6b6b;
+--muted: #64748b;
+    --glow1: rgba(0,255,224,0.08);
+    --glow2: rgba(123,97,255,0.08);
+    --glow3: rgba(255,107,107,0.08);
+    --shadow: rgba(15,23,42,0.08);
+    --shadow-hover: rgba(15,23,42,0.15);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+color: #e2e8f0;
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Light grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+background-image:\n      linear-gradient(rgba(0,255,224,0.03) 1px, transparent 1px),\n      linear-gradient(90deg, rgba(0,255,224,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 60px 24px 80px;
+  }
+
+  /* Header */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,255,224,0.08);
+    border: 1px solid rgba(0,255,224,0.25);
+    border-radius: 4px;
+    padding: 6px 14px;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--accent1);
+    text-transform: uppercase;
+    margin-bottom: 28px;
+    animation: fadeDown 0.6s ease both;
+  }
+  .badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent1);
+    box-shadow: 0 0 8px var(--accent1);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.2rem, 6vw, 4rem);
+    font-weight: 800;
+    line-height: 1.05;
+    margin-bottom: 16px;
+    animation: fadeDown 0.6s 0.1s ease both;
+  }
+  h1 span {
+    background: linear-gradient(135deg, var(--accent1), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Student Name Section - NEW */
+  .student-name {
+    text-align: center;
+    margin: 32px 0 48px;
+    animation: fadeDown 0.6s 0.15s ease both;
+  }
+  .student-name span {
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 8px;
+  }
+  .student-name .name {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent1), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0;
+    line-height: 1.1;
+  }
+  .student-name .meta-student {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+    letter-spacing: 0.05em;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.8;
+    max-width: 520px;
+    margin: 0 auto 64px;
+    text-align: center;
+    animation: fadeDown 0.6s 0.2s ease both;
+  }
+
+  /* Cards grid */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    animation: fadeUp 0.6s ease both;
+    box-shadow: 0 1px 3px var(--shadow);
+  }
+  .card:nth-child(1) { animation-delay: 0.3s; }
+  .card:nth-child(2) { animation-delay: 0.4s; }
+  .card:nth-child(3) { animation-delay: 0.5s; }
+
+  .card:focus-visible {
+    outline: 2px solid var(--accent1);
+    outline-offset: 2px;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .card-1::before { background: var(--glow1); }
+  .card-2::before { background: var(--glow2); }
+  .card-3::before { background: var(--glow3); }
+
+  .card:hover { 
+    transform: translateY(-6px); 
+    box-shadow: 0 20px 60px var(--shadow-hover);
+  }
+  .card-1:hover { border-color: var(--accent1); }
+  .card-2:hover { border-color: var(--accent2); }
+  .card-3:hover { border-color: var(--accent3); }
+  .card:hover::before { opacity: 1; }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .icon-wrap {
+    width: 52px; height: 52px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+  .card-1 .icon-wrap { background: rgba(0,255,224,0.1); border: 1px solid rgba(0,255,224,0.2); }
+  .card-2 .icon-wrap { background: rgba(123,97,255,0.1); border: 1px solid rgba(123,97,255,0.2); }
+  .card-3 .icon-wrap { background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.2); }
+
+  .ala-label {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: 700;
+  }
+  .card-1 .ala-label { background: rgba(0,255,224,0.1); color: var(--accent1); border: 1px solid rgba(0,255,224,0.2); }
+  .card-2 .ala-label { background: rgba(123,97,255,0.1); color: var(--accent2); border: 1px solid rgba(123,97,255,0.2); }
+  .card-3 .ala-label { background: rgba(255,107,107,0.1); color: var(--accent3); border: 1px solid rgba(255,107,107,0.2); }
+
+  .card h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 0;
+  }
+
+  .card p {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.8;
+    flex: 1;
+  }
+
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .tag {
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: rgba(226,232,240,0.5);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  .btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 12px 20px;
+    border-radius: 8px;
+    letter-spacing: 0.05em;
+    transition: gap 0.2s ease;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .card:hover .btn { gap: 14px; }
+
+  .card-1 .btn { background: var(--accent1); color: #090b10; }
+  .card-2 .btn { background: var(--accent2); color: #fff; }
+  .card-3 .btn { background: var(--accent3); color: #fff; }
+
+  .arrow { font-size: 16px; }
+
+  /* Footer */
+  footer {
+    position: relative; z-index: 1;
+    text-align: center;
+    margin-top: 80px;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    border-top: 1px solid var(--border);
+    padding-top: 32px;
+  }
+  footer span { color: var(--accent1); }
+
+  /* Animations */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .grid { grid-template-columns: 1fr; gap: 20px; }
+    .container { padding: 40px 16px 60px; }
+    .card-top { flex-direction: column; align-items: flex-start; gap: 12px; }
+  }
+
+  /* Scroll indicator */
+  @media (min-height: 800px) {
+    .container::after {
+      content: '';
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 2px;
+      height: 40px;
+      background: linear-gradient(180deg, transparent, var(--muted));
+      animation: scrollBounce 2s infinite;
+    }
+  }
+  @keyframes scrollBounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+    40% { transform: translateX(-50%) translateY(-10px); }
+    60% { transform: translateX(-50%) translateY(-5px); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="badge">Applied Lab Activity Portal</div>
+  <h1>Cryptography<br><span>Lab Dashboard</span></h1>
+  
+  <!-- Student Name Section -->
+  <div class="student-name">
+    <span>Submitted by</span>
+    <h2 class="name">Dhruvrajsinh Parmar</h2>
+    <div class="meta-student">B.Tech IT </div>
+  </div>
+
+  <p class="subtitle">Network Security & Cryptography — Activity submissions portal. Select an ALA below to view its implementation, source code, and analysis.</p>
+
+  <div class="grid">
+    <!-- ALA 1 -->
+    <a href="ala1.html" class="card card-1" aria-label="View ALA 1: Digital Signature Verifier">
+      <div class="card-top">
+        <div class="icon-wrap" role="img" aria-label="Signature icon">✍️</div>
+        <span class="ala-label">ALA 1</span>
+      </div>
+      <h2>Digital Signature Verifier</h2>
+      <p>Public-key cryptography implementation with RSA key pair generation, SHA-256 message hashing, digital signing, and signature verification in Python.</p>
+      <div class="tags">
+        <span class="tag">RSA</span>
+        <span class="tag">SHA-256</span>
+        <span class="tag">Public-Key</span>
+        <span class="tag">Python</span>
+      </div>
+      <span class="btn">View ALA 1 <span class="arrow">→</span></span>
+    </a>
+
+    <!-- ALA 2 -->
+    <a href="ala2.html" class="card card-2" aria-label="View ALA 2: SHA Integrity Analyzer">
+      <div class="card-top">
+        <div class="icon-wrap" role="img" aria-label="Search icon">🔍</div>
+        <span class="ala-label">ALA 2</span>
+      </div>
+      <h2>SHA Integrity Analyzer</h2>
+      <p>Comparative analysis of SHA-1, SHA-256, and SHA-512 hash algorithms demonstrating the avalanche effect — how tiny input changes produce drastically different outputs.</p>
+      <div class="tags">
+        <span class="tag">SHA-1</span>
+        <span class="tag">SHA-256</span>
+        <span class="tag">SHA-512</span>
+        <span class="tag">Avalanche</span>
+      </div>
+      <span class="btn">View ALA 2 <span class="arrow">→</span></span>
+    </a>
+
+    <!-- ALA 3 -->
+    <a href="ala3.html" class="card card-3" aria-label="View ALA 3: MAC-Based Message Authentication">
+      <div class="card-top">
+        <div class="icon-wrap" role="img" aria-label="Lock icon">🔐</div>
+        <span class="ala-label">ALA 3</span>
+      </div>
+      <h2>MAC-Based Message Authentication</h2>
+      <p>HMAC implementation simulating sender-receiver communication. The sender generates a MAC for a message; the receiver verifies data integrity using a shared secret key.</p>
+      <div class="tags">
+        <span class="tag">HMAC</span>
+        <span class="tag">SHA-256</span>
+        <span class="tag">Authentication</span>
+        <span class="tag">Python</span>
+      </div>
+      <span class="btn">View ALA 3 <span class="arrow">→</span></span>
+    </a>
+  </div>
+</div>
+
+<footer>
+  <p><span>Cryptography Lab Activities</span> &nbsp;|&nbsp; <span>Network Security</span> </p>
+</footer>
+</body>
+</html>

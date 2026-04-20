@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALA 3 — MAC-Based Message Authentication</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #090b10;
+    --surface: #0d1117;
+    --border: #1e2736;
+    --accent: #ff6b6b;
+    --accent-dim: rgba(255,107,107,0.1);
+    --accent-border: rgba(255,107,107,0.28);
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --green: #4ade80;
+    --yellow: #facc15;
+    --cyan: #22d3ee;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    line-height: 1.7;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,107,107,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,107,107,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .top-bar {
+    position: relative; z-index: 10;
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex; align-items: center; gap: 16px;
+    background: rgba(9,11,16,0.9);
+    backdrop-filter: blur(12px);
+  }
+  .back-btn {
+    display: flex; align-items: center; gap: 8px;
+    color: var(--muted); text-decoration: none; font-size: 12px;
+    transition: color 0.2s;
+  }
+  .back-btn:hover { color: var(--accent); }
+  .breadcrumb { font-size: 12px; color: var(--muted); }
+  .breadcrumb span { color: var(--accent); }
+
+  main {
+    position: relative; z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  .ala-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent-dim);
+    border: 1px solid var(--accent-border);
+    color: var(--accent);
+    font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase;
+    padding: 5px 14px; border-radius: 4px; margin-bottom: 20px;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 800; line-height: 1.1; margin-bottom: 16px;
+  }
+  h1 .accent { color: var(--accent); }
+
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 16px;
+    margin-bottom: 40px; font-size: 12px; color: var(--muted);
+  }
+  .meta-item { display: flex; align-items: center; gap: 6px; }
+  .meta-item::before { content: '◆'; font-size: 8px; color: var(--accent); }
+
+  section { margin-bottom: 48px; }
+
+  h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.1rem; font-weight: 700;
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 12px;
+    color: var(--accent);
+  }
+  h2::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(90deg, var(--accent-border), transparent);
+  }
+
+  .objective-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 24px;
+    font-size: 13px; color: var(--muted); line-height: 1.9;
+  }
+
+  /* Sender-Receiver diagram */
+  .comm-diagram {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .comm-side {
+    flex: 1;
+    padding: 24px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .comm-side.sender { border-right: 1px solid var(--border); }
+
+  .comm-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px; font-weight: 700;
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 8px;
+  }
+  .comm-title .icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .sender .icon { background: rgba(0,255,224,0.1); border: 1px solid rgba(0,255,224,0.2); }
+  .receiver .icon { background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.2); }
+  .sender .comm-title { color: #00ffe0; }
+  .receiver .comm-title { color: var(--green); }
+
+  .comm-step {
+    display: flex; gap: 10px; align-items: flex-start;
+    font-size: 12px; color: var(--muted); line-height: 1.6;
+  }
+  .comm-step .num {
+    font-size: 10px; font-weight: 700; padding: 2px 7px;
+    border-radius: 3px; flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .sender .num { background: rgba(0,255,224,0.1); color: #00ffe0; border: 1px solid rgba(0,255,224,0.2); }
+  .receiver .num { background: rgba(74,222,128,0.1); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
+
+  .comm-middle {
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px 12px;
+    flex-direction: column; gap: 8px;
+    min-width: 80px;
+  }
+  .comm-channel {
+    font-size: 10px; color: var(--muted); letter-spacing: 0.1em;
+    text-transform: uppercase; text-align: center;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+  .comm-arrow { color: var(--yellow); font-size: 20px; }
+
+  /* Code block */
+  .code-wrap {
+    background: #0a0e16;
+    border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .code-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .code-header .dots { display: flex; gap: 6px; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #febc2e; }
+  .dot-g { background: #28c840; }
+  .code-title { font-size: 12px; color: var(--muted); }
+  .code-lang {
+    font-size: 10px;
+    background: var(--accent-dim); color: var(--accent);
+    border: 1px solid var(--accent-border);
+    padding: 3px 10px; border-radius: 4px; letter-spacing: 0.1em;
+  }
+  pre {
+    padding: 24px; overflow-x: auto;
+    font-size: 12.5px; line-height: 1.8; color: #cdd6f4;
+  }
+  .kw { color: #cba6f7; }
+  .fn { color: #89b4fa; }
+  .st { color: #a6e3a1; }
+  .cm { color: #6c7086; font-style: italic; }
+  .nm { color: #fab387; }
+
+  /* Output */
+  .output-box {
+    background: #040608;
+    border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden;
+  }
+  .output-header {
+    background: #0a0e16;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--muted);
+  }
+  .output-header::before { content: '●'; color: var(--green); font-size: 10px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+  .output-body { padding: 20px 24px; font-size: 12px; line-height: 2.1; }
+  .o-muted { color: var(--muted); }
+  .o-val { color: #cdd6f4; word-break: break-all; }
+  .o-ok { color: var(--green); font-weight: 700; }
+  .o-fail { color: var(--accent); font-weight: 700; }
+  .o-label { color: var(--yellow); }
+  .o-cyan { color: var(--cyan); }
+
+  /* Analysis */
+  .analysis-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;
+  }
+  .analysis-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 20px;
+  }
+  .analysis-card h3 {
+    font-size: 13px; font-weight: 700;
+    color: var(--accent); margin-bottom: 10px;
+  }
+  .analysis-card p { font-size: 12px; color: var(--muted); line-height: 1.8; }
+
+  /* Difference table */
+  .diff-table {
+    width: 100%; border-collapse: collapse; font-size: 12px;
+  }
+  .diff-table th {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 10px 14px;
+    text-align: left; font-size: 11px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .diff-table td {
+    border: 1px solid var(--border);
+    padding: 10px 14px; color: var(--muted);
+    background: #0a0e16;
+  }
+  .diff-table tr:hover td { background: var(--surface); }
+  .hl { color: var(--text); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <a href="index.html" class="back-btn">← Back</a>
+  <span class="breadcrumb">Dashboard / <span>ALA 3</span></span>
+</div>
+
+<main>
+  <div class="ala-badge">ALA 3 — HMAC Authentication</div>
+  <h1>MAC-Based Message<br><span class="accent">Authentication</span></h1>
+  <div class="meta">
+    <span class="meta-item">Python 3.x</span>
+    <span class="meta-item">HMAC-SHA256</span>
+    <span class="meta-item">Shared Secret Key</span>
+    <span class="meta-item">hmac · hashlib</span>
+  </div>
+
+  <!-- Objective -->
+  <section>
+    <h2>Objective</h2>
+    <div class="objective-box">
+      Design and simulate a <strong>Message Authentication Code (MAC)</strong> mechanism using HMAC in Python. A sender generates a MAC for a message using a shared secret key; the receiver verifies the MAC to confirm both <strong>data integrity</strong> (message not altered) and <strong>authentication</strong> (message came from legitimate sender).
+    </div>
+  </section>
+
+  <!-- Sender-Receiver Diagram -->
+  <section>
+    <h2>Sender ↔ Receiver Protocol</h2>
+    <div class="comm-diagram">
+      <div class="comm-side sender">
+        <div class="comm-title"><div class="icon">📤</div> Sender</div>
+        <div class="comm-step">
+          <span class="num">1</span>
+          <span>Has plaintext <strong>message</strong> to send</span>
+        </div>
+        <div class="comm-step">
+          <span class="num">2</span>
+          <span>Uses shared <strong>secret key</strong> + HMAC-SHA256 to compute MAC</span>
+        </div>
+        <div class="comm-step">
+          <span class="num">3</span>
+          <span>Transmits <strong>message + MAC</strong> to receiver</span>
+        </div>
+      </div>
+      <div class="comm-middle">
+        <div class="comm-arrow">→</div>
+        <div class="comm-channel">Network Channel</div>
+        <div class="comm-arrow">→</div>
+      </div>
+      <div class="comm-side receiver">
+        <div class="comm-title"><div class="icon">📥</div> Receiver</div>
+        <div class="comm-step">
+          <span class="num">1</span>
+          <span>Receives <strong>message + MAC</strong></span>
+        </div>
+        <div class="comm-step">
+          <span class="num">2</span>
+          <span>Re-computes MAC using same <strong>secret key</strong> + HMAC-SHA256</span>
+        </div>
+        <div class="comm-step">
+          <span class="num">3</span>
+          <span>Compares MACs — if equal, message is <strong>authentic & intact</strong></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Source Code: Sender -->
+  <section>
+    <h2>Source Code</h2>
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+        <span class="code-title">sender.py</span>
+        <span class="code-lang">PYTHON</span>
+      </div>
+      <pre><span class="cm"># ALA 3: MAC-Based Message Authentication — Sender Script
+# Generates HMAC for a message using a shared secret key</span>
+
+<span class="kw">import</span> hmac
+<span class="kw">import</span> hashlib
+<span class="kw">import</span> json
+
+<span class="cm"># ─── Shared Secret Key (known to both sender & receiver) ──────────────────────</span>
+SECRET_KEY = <span class="st">b"supersecretkey_ALA3_2024"</span>
+
+<span class="kw">def</span> <span class="fn">generate_mac</span>(message: <span class="fn">str</span>, key: <span class="fn">bytes</span>) -> <span class="fn">str</span>:
+    <span class="st">"""Generate HMAC-SHA256 for the given message."""</span>
+    mac = hmac.<span class="fn">new</span>(key, message.<span class="fn">encode</span>(<span class="st">'utf-8'</span>), hashlib.sha256)
+    <span class="kw">return</span> mac.<span class="fn">hexdigest</span>()
+
+<span class="kw">if</span> __name__ == <span class="st">"__main__"</span>:
+    message = <span class="st">"Transfer ₹5000 to Account 9876543210"</span>
+
+    mac_value = <span class="fn">generate_mac</span>(message, SECRET_KEY)
+
+    <span class="cm"># Package message and MAC together (simulating network transmission)</span>
+    packet = {<span class="st">"message"</span>: message, <span class="st">"mac"</span>: mac_value}
+
+    <span class="fn">print</span>(<span class="st">"=== SENDER ==="</span>)
+    <span class="fn">print</span>(<span class="fn">f</span><span class="st">"\n[*] Original Message : {message}"</span>)
+    <span class="fn">print</span>(<span class="fn">f</span><span class="st">"[+] HMAC-SHA256 MAC  : {mac_value}"</span>)
+    <span class="fn">print</span>(<span class="fn">f</span><span class="st">"\n[→] Packet transmitted:\n    {json.dumps(packet, indent=4)}"</span>)
+
+    <span class="cm"># Save to file to simulate network transfer</span>
+    <span class="kw">with</span> <span class="fn">open</span>(<span class="st">"packet.json"</span>, <span class="st">"w"</span>) <span class="kw">as</span> f:
+        json.<span class="fn">dump</span>(packet, f)</pre>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+        <span class="code-title">receiver.py</span>
+        <span class="code-lang">PYTHON</span>
+      </div>
+      <pre><span class="cm"># ALA 3: MAC-Based Message Authentication — Receiver Script
+# Verifies the HMAC to confirm message integrity and authenticity</span>
+
+<span class="kw">import</span> hmac
+<span class="kw">import</span> hashlib
+<span class="kw">import</span> json
+
+<span class="cm"># ─── Shared Secret Key (must match sender's key) ──────────────────────────────</span>
+SECRET_KEY = <span class="st">b"supersecretkey_ALA3_2024"</span>
+
+<span class="kw">def</span> <span class="fn">verify_mac</span>(message: <span class="fn">str</span>, received_mac: <span class="fn">str</span>, key: <span class="fn">bytes</span>) -> <span class="fn">bool</span>:
+    <span class="st">"""Re-compute MAC and compare using constant-time comparison."""</span>
+    expected_mac = hmac.<span class="fn">new</span>(key, message.<span class="fn">encode</span>(<span class="st">'utf-8'</span>), hashlib.sha256).<span class="fn">hexdigest</span>()
+    <span class="cm"># hmac.compare_digest prevents timing attacks</span>
+    <span class="kw">return</span> hmac.<span class="fn">compare_digest</span>(expected_mac, received_mac)
+
+<span class="kw">if</span> __name__ == <span class="st">"__main__"</span>:
+    <span class="cm"># Receive packet (simulated from file)</span>
+    <span class="kw">with</span> <span class="fn">open</span>(<span class="st">"packet.json"</span>, <span class="st">"r"</span>) <span class="kw">as</span> f:
+        packet = json.<span class="fn">load</span>(f)
+
+    message      = packet[<span class="st">"message"</span>]
+    received_mac = packet[<span class="st">"mac"</span>]
+
+    <span class="fn">print</span>(<span class="st">"=== RECEIVER ==="</span>)
+    <span class="fn">print</span>(<span class="fn">f</span><span class="st">"\n[←] Received Message : {message}"</span>)
+    <span class="fn">print</span>(<span class="fn">f</span><span class="st">"[←] Received MAC     : {received_mac}"</span>)
+
+    <span class="cm"># Test 1: Verify unmodified message</span>
+    is_valid = <span class="fn">verify_mac</span>(message, received_mac, SECRET_KEY)
+    <span class="fn">print</span>(<span class="fn">f</span><span class="st">"\n[✓] MAC Verification (original) : {is_valid}"</span>)
+
+    <span class="cm"># Test 2: Tampered message</span>
+    tampered_msg = <span class="st">"Transfer ₹50000 to Account 1111111111"</span>
+    is_tampered  = <span class="fn">verify_mac</span>(tampered_msg, received_mac, SECRET_KEY)
+    <span class="fn">print</span>(<span class="fn">f</span><span class="st">"[✗] MAC Verification (tampered)  : {is_tampered}"</span>)
+
+    <span class="kw">if</span> is_valid:
+        <span class="fn">print</span>(<span class="st">"\n[SECURE] Message is authentic and unmodified!"</span>)
+    <span class="kw">else</span>:
+        <span class="fn">print</span>(<span class="st">"\n[ALERT]  Message has been tampered! Discard it."</span>)</pre>
+    </div>
+  </section>
+
+  <!-- Output -->
+  <section>
+    <h2>Expected Output</h2>
+    <div class="output-box">
+      <div class="output-header">Terminal Output — sender.py → receiver.py</div>
+      <div class="output-body">
+        <div class="o-muted">═══ SENDER ═══</div><br>
+        <div class="o-muted"><span class="o-label">[*] Original Message</span> : Transfer ₹5000 to Account 9876543210</div>
+        <div class="o-muted"><span class="o-cyan">[+] HMAC-SHA256 MAC </span> : <span class="o-val">3a7bd3e2360a3d29eea436fcfb7e44c735d117c312c2acacb1c15b08c11d8a56</span></div>
+        <div class="o-muted"><span class="o-cyan">[→] Packet transmitted</span></div><br>
+        <div class="o-muted">═══ RECEIVER ═══</div><br>
+        <div class="o-muted"><span class="o-label">[←] Received Message</span> : Transfer ₹5000 to Account 9876543210</div>
+        <div class="o-muted"><span class="o-label">[←] Received MAC    </span> : <span class="o-val">3a7bd3e2360a3d29eea436fcfb7e44c735d117c312c2acacb1c15b08c11d8a56</span></div><br>
+        <div class="o-ok">[✓] MAC Verification (original) : True</div>
+        <div class="o-fail">[✗] MAC Verification (tampered)  : False</div><br>
+        <div class="o-ok">[SECURE] Message is authentic and unmodified!</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAC vs DS Table -->
+  <section>
+    <h2>MAC vs Digital Signature</h2>
+    <table class="diff-table">
+      <thead>
+        <tr>
+          <th>Property</th>
+          <th>MAC (HMAC)</th>
+          <th>Digital Signature (RSA)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="hl">Key Type</td>
+          <td>Symmetric (shared secret)</td>
+          <td>Asymmetric (public/private)</td>
+        </tr>
+        <tr>
+          <td class="hl">Non-repudiation</td>
+          <td style="color:#f87171">No</td>
+          <td style="color:#4ade80">Yes</td>
+        </tr>
+        <tr>
+          <td class="hl">Speed</td>
+          <td style="color:#4ade80">Fast</td>
+          <td>Slower</td>
+        </tr>
+        <tr>
+          <td class="hl">Use Case</td>
+          <td>API authentication, TLS</td>
+          <td>Certificates, legal documents</td>
+        </tr>
+        <tr>
+          <td class="hl">Integrity</td>
+          <td style="color:#4ade80">Yes</td>
+          <td style="color:#4ade80">Yes</td>
+        </tr>
+        <tr>
+          <td class="hl">Authentication</td>
+          <td style="color:#4ade80">Yes</td>
+          <td style="color:#4ade80">Yes</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Analysis -->
+  <section>
+    <h2>Analysis</h2>
+    <div class="analysis-grid">
+      <div class="analysis-card">
+        <h3>🔑 Shared Key Security</h3>
+        <p>HMAC's security relies on the secrecy of the shared key. If the key is compromised, an attacker can forge valid MACs. Secure key exchange (e.g., Diffie-Hellman) is essential.</p>
+      </div>
+      <div class="analysis-card">
+        <h3>⏱️ Timing Attack Prevention</h3>
+        <p><code>hmac.compare_digest()</code> uses constant-time comparison, preventing timing side-channel attacks where an attacker could guess the MAC character by character by measuring response times.</p>
+      </div>
+      <div class="analysis-card">
+        <h3>💼 Real-World Use</h3>
+        <p>HMAC is used in JWT tokens, REST API authentication, TLS record authentication, and WhatsApp/Signal message verification — billions of messages daily.</p>
+      </div>
+      <div class="analysis-card">
+        <h3>🛡️ Data Integrity</h3>
+        <p>The tampered message test proves integrity: even changing a single digit (₹5000 → ₹50000) causes a completely different HMAC, immediately detected by the receiver.</p>
+      </div>
+    </div>
+  </section>
+</main>
+</body>
+</html>
